@@ -172,7 +172,7 @@ def set_static_cams_from_gui(cfg, load_dir, max_frames):
                 file_path = load_dir / f"{frame:012d}.pickle"
                 _, _, _ = env.reset_from_storage(file_path)
                 env.p.stepSimulation()
-                frame_rgbs, frame_depths = env.get_camera_obs()
+                frame_rgbs, frame_depths, _ = env.get_camera_obs()
                 rgb_static = frame_rgbs[cam_index]
 
                 cv2.imshow("Render_view_window", cv2.resize(rgb_static, (500, 500))[:, :, ::-1])
@@ -265,7 +265,7 @@ def worker_run(load_dir, rendering_cfg, proc_num, start_frame, stop_frame, episo
         # action is robot state of next frame
         if frame_counter > 0:
             actions.append(action)
-        frame_rgbs, frame_depths = env.get_camera_obs()
+        frame_rgbs, frame_depths, _ = env.get_camera_obs()
         rgbs.append(frame_rgbs)
         depths.append(frame_depths)
         # for terminal states save current robot state as action

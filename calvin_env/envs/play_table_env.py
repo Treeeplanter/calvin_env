@@ -9,9 +9,9 @@ import sys
 import time
 
 import cv2
-import gym
-import gym.utils
-import gym.utils.seeding
+import gymnasium as gym
+# import gym.utils
+# import gym.utils.seeding
 import hydra
 import numpy as np
 import pybullet as p
@@ -36,6 +36,7 @@ class PlayTableSimEnv(gym.Env):
         scene_cfg,
         use_scene_info,
         use_egl,
+        cubes_table_only = False,
         control_freq=30,
     ):
         self.p = p
@@ -58,7 +59,7 @@ class PlayTableSimEnv(gym.Env):
         self.seed(seed)
         self.robot = hydra.utils.instantiate(robot_cfg, cid=self.cid)
         self.scene = hydra.utils.instantiate(scene_cfg, p=self.p, cid=self.cid, np_random=self.np_random)
-
+        self.cubes_table_only = cubes_table_only
         # Load Env
         self.load()
 
@@ -147,9 +148,9 @@ class PlayTableSimEnv(gym.Env):
         else:
             print("does not own physics client id")
 
-    def render(self, mode="human"):
+    def render(self, mode="human", height=None, width=None):
         """render is gym compatibility function"""
-        rgb_obs, depth_obs = self.get_camera_obs()
+        rgb_obs, depth_obs, seg_obs = self.get_camera_obs(height=height, width=width)
         if mode == "human":
             if "rgb_static" in rgb_obs:
                 img = rgb_obs["rgb_static"][:, :, ::-1]
@@ -161,6 +162,9 @@ class PlayTableSimEnv(gym.Env):
         elif mode == "rgb_array":
             assert "rgb_static" in rgb_obs, "Environment does not have static camera"
             return rgb_obs["rgb_static"]
+        elif mode =="rgb+depth+segmentation":
+            assert "rgb_static" in rgb_obs, "Environment does not have static camera"
+            return rgb_obs["rgb_static"], depth_obs["depth_static"], seg_obs["seg_static"]
         else:
             raise NotImplementedError
 
@@ -168,8 +172,10 @@ class PlayTableSimEnv(gym.Env):
         return self.scene.get_info()
 
     def reset(self, robot_obs=None, scene_obs=None):
-        self.scene.reset(scene_obs)
+        
         self.robot.reset(robot_obs)
+        self.scene.reset(scene_obs, shuffle_movable_objects = True, table_only = self.cubes_table_only) 
+
         self.p.stepSimulation(physicsClientId=self.cid)
         return self.get_obs()
 
@@ -178,20 +184,22 @@ class PlayTableSimEnv(gym.Env):
         # self.robot.np_random = self.np_random  # use the same np_randomizer for robot as for env
         return [seed]
 
-    def get_camera_obs(self):
+    def get_camera_obs(self, height=None, width=None):
         assert self.cameras is not None
         rgb_obs = {}
         depth_obs = {}
+        seg_obs = {}
         for cam in self.cameras:
-            rgb, depth = cam.render()
+            rgb, depth, seg = cam.render(height=height, width=width)
             rgb_obs[f"rgb_{cam.name}"] = rgb
             depth_obs[f"depth_{cam.name}"] = depth
-        return rgb_obs, depth_obs
+            seg_obs[f"seg_{cam.name}"] = seg
+        return rgb_obs, depth_obs, seg_obs
 
     def get_obs(self):
         """Collect camera, robot and scene observations."""
-        rgb_obs, depth_obs = self.get_camera_obs()
-        obs = {"rgb_obs": rgb_obs, "depth_obs": depth_obs}
+        rgb_obs, depth_obs, seg_obs = self.get_camera_obs()
+        obs = {"rgb_obs": rgb_obs, "depth_obs": depth_obs, "seg_obs": seg_obs}
         obs.update(self.get_state_obs())
         return obs
 

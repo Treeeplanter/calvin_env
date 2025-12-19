@@ -30,9 +30,24 @@ class MovableObject(BaseObject):
             physicsClientId=self.cid,
         )
 
-    def reset(self, state=None):
+    # def reset(self, state=None):
+    #     if state is None:
+    #         initial_pos, initial_orn = self.sample_initial_pose()
+    #     else:
+    #         initial_pos, initial_orn = np.split(state, [3])
+    #         if len(initial_orn) == 3:
+    #             initial_orn = self.p.getQuaternionFromEuler(initial_orn)
+    #     self.p.resetBasePositionAndOrientation(
+    #         self.uid,
+    #         initial_pos,
+    #         initial_orn,
+    #         physicsClientId=self.cid,
+    #     )
+
+
+    def reset(self, state=None, table_only = False):
         if state is None:
-            initial_pos, initial_orn = self.sample_initial_pose()
+            initial_pos, initial_orn = self.sample_initial_pose(table_only)
         else:
             initial_pos, initial_orn = np.split(state, [3])
             if len(initial_orn) == 3:
@@ -44,10 +59,40 @@ class MovableObject(BaseObject):
             physicsClientId=self.cid,
         )
 
-    def sample_initial_pose(self):
+    # def sample_initial_pose(self):
+    #     initial_pos = self.initial_pos
+    #     if isinstance(self.initial_pos, str):
+    #         if self.initial_pos == "any":
+    #             surface = self.np_random.choice(list(self.surfaces.keys()))
+    #             sampling_range = np.array(self.surfaces[surface])
+    #         else:
+    #             try:
+    #                 sampling_range = np.array(self.surfaces[self.initial_pos])
+    #             except ConfigKeyError:
+    #                 log.error(f"surface {self.initial_pos} not specified in scene config")
+    #                 raise KeyError
+    #         initial_pos = self.np_random.uniform(sampling_range[0], sampling_range[1])
+    #     initial_orn = self.initial_orn
+    #     if isinstance(self.initial_orn, str):
+    #         if self.initial_orn == "any":
+    #             initial_orn = np.array(
+    #                 self.p.getQuaternionFromEuler(self.np_random.uniform([0, 0, -np.pi], [0, 0, np.pi]))
+    #             )
+    #         else:
+    #             log.error("Only keyword 'any' supported at the moment")
+    #             raise ValueError
+    #     return initial_pos, initial_orn
+
+    def sample_initial_pose(self, table_only = False):
         initial_pos = self.initial_pos
         if isinstance(self.initial_pos, str):
-            if self.initial_pos == "any":
+            if table_only:
+                valid_surfaces = [self.surfaces[k] for k in self.surfaces.keys() if k != "slider_right" and k != "slider_left"] 
+                # valid_surfaces.append([[-0.32, 0.05, 0.46], [-0.20, 0.12, 0.46]]) # this is a smaller margin inside the left slider 
+                # valid_surfaces.append([[-0.32, -0.15, 0.46], [-0.16, 0.03, 0.46]]) # this is the area in front of left slider 
+                # valid_surfaces.append([[0.0, -0.3, 0.38], [0.35, -0.2, 0.38]]) # this is the drawer that is open(DOES NOT WORK IF NOT OPEN)
+                sampling_range = np.array(self.np_random.choice(valid_surfaces))
+            elif self.initial_pos == "any":
                 surface = self.np_random.choice(list(self.surfaces.keys()))
                 sampling_range = np.array(self.surfaces[surface])
             else:

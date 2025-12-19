@@ -60,13 +60,17 @@ class StaticCamera(Camera):
         look_at = [float(x) for x in look_at]
         return look_from, look_at
 
-    def render(self):
+    def render(self, width = None, height = None):
+        width = self.width if width is None else width 
+        height = self.height if height is None else height 
         image = p.getCameraImage(
-            width=self.width,
-            height=self.height,
+            width=width,
+            height=height,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix,
             physicsClientId=self.cid,
+            renderer=p.ER_TINY_RENDERER,  # Use TinyRenderer for link-level segmentation
+            flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
         )
-        rgb_img, depth_img = self.process_rgbd(image, self.nearval, self.farval)
-        return rgb_img, depth_img
+        rgb_img, depth_img, seg_img = self.process_rgbd(image, self.nearval, self.farval)
+        return rgb_img, depth_img, seg_img

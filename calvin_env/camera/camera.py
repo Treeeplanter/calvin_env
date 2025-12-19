@@ -41,7 +41,9 @@ class Camera:
         rgb_img = rgb[:, :, :3]
         depth_buffer = np.reshape(depthPixels, [height, width])
         depth = self.z_buffer_to_real_distance(z_buffer=depth_buffer, far=farval, near=nearval)
-        return rgb_img, depth
+        # Process segmentation mask
+        seg_mask = np.reshape(segmentationMaskBuffer, [height, width])
+        return rgb_img, depth, seg_mask
 
     # Reference: world2pixel
     # https://github.com/bulletphysics/bullet3/issues/1952

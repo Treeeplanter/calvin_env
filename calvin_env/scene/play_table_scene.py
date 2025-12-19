@@ -88,12 +88,32 @@ class PlayTableScene:
 
         self.p.loadURDF(os.path.join(self.data_path, "plane/plane.urdf"), physicsClientId=self.cid)
 
-    def reset(self, scene_obs=None):
+    # def reset(self, scene_obs=None):
+    #     """Reset objects and doors to initial position."""
+    #     if scene_obs is None:
+    #         for obj in itertools.chain(self.doors, self.buttons, self.switches, self.lights):
+    #             obj.reset()
+    #         self.reset_movable_objects()
+    #     else:
+    #         door_info, button_info, switch_info, light_info, obj_info = self.parse_scene_obs(scene_obs)
+
+    #         for door, state in zip(self.doors, door_info):
+    #             door.reset(state)
+    #         for button, state in zip(self.buttons, button_info):
+    #             button.reset(state)
+    #         for switch, state in zip(self.switches, switch_info):
+    #             switch.reset(state)
+    #         for light, state in zip(self.lights, light_info):
+    #             light.reset(state)
+    #         for obj, state in zip(self.movable_objects, obj_info):
+    #             obj.reset(state)
+
+    def reset(self, scene_obs=None, shuffle_movable_objects = False, table_only = False):
         """Reset objects and doors to initial position."""
         if scene_obs is None:
             for obj in itertools.chain(self.doors, self.buttons, self.switches, self.lights):
-                obj.reset()
-            self.reset_movable_objects()
+                obj.reset() #if not isinstance(obj, Light) else obj.reset(state = 1.0)
+            self.reset_movable_objects(table_only = table_only)
         else:
             door_info, button_info, switch_info, light_info, obj_info = self.parse_scene_obs(scene_obs)
 
@@ -105,8 +125,11 @@ class PlayTableScene:
                 button.reset(state)
             for switch, state in zip(self.switches, switch_info):
                 switch.reset(state)
-            for obj, state in zip(self.movable_objects, obj_info):
-                obj.reset(state)
+            if shuffle_movable_objects:
+                self.reset_movable_objects(table_only = table_only)
+            else:
+                for obj, state in zip(self.movable_objects, obj_info):
+                    obj.reset(state)
 
     def parse_scene_obs(self, scene_obs):
         # an object pose is composed of position (3) and orientation (4 for quaternion)  / (3 for euler)
@@ -128,12 +151,29 @@ class PlayTableScene:
 
         return door_info, button_info, switch_info, light_info, obj_info
 
-    def reset_movable_objects(self):
+    # def reset_movable_objects(self):
+    #     """reset movable objects such that there are no pairwise contacts"""
+    #     num_sampling_iterations = 1000
+    #     for i in range(num_sampling_iterations):
+    #         for obj in self.movable_objects:
+    #             obj.reset()
+    #         self.p.stepSimulation()
+    #         contact = False
+    #         for obj_a, obj_b in itertools.combinations(self.movable_objects, 2):
+    #             if np.any(len(self.p.getContactPoints(bodyA=obj_a.uid, bodyB=obj_b.uid, physicsClientId=self.cid))):
+    #                 contact = True
+    #                 break
+    #         if not contact:
+    #             return
+    #     log.error(f"Could not place objects in {num_sampling_iterations} iterations without contacts")
+    #     return
+
+    def reset_movable_objects(self, table_only = False):
         """reset movable objects such that there are no pairwise contacts"""
         num_sampling_iterations = 1000
         for i in range(num_sampling_iterations):
             for obj in self.movable_objects:
-                obj.reset()
+                obj.reset(table_only = table_only)
             self.p.stepSimulation()
             contact = False
             for obj_a, obj_b in itertools.combinations(self.movable_objects, 2):

@@ -22,7 +22,7 @@ class GripperCamera(Camera):
 
         self.name = name
 
-    def render(self):
+    def render(self, width = None, height = None):
         camera_ls = p.getLinkState(
             bodyUniqueId=self.robot_uid, linkIndex=self.gripper_cam_link, physicsClientId=self.cid
         )
@@ -35,12 +35,16 @@ class GripperCamera(Camera):
         self.projection_matrix = p.computeProjectionMatrixFOV(
             fov=self.fov, aspect=self.aspect, nearVal=self.nearval, farVal=self.farval
         )
+        width = self.width if width is None else width 
+        height = self.height if height is None else height 
         image = p.getCameraImage(
-            width=self.width,
-            height=self.height,
+            width=width,
+            height=height,
             viewMatrix=self.view_matrix,
             projectionMatrix=self.projection_matrix,
             physicsClientId=self.cid,
+            renderer=p.ER_TINY_RENDERER,  # Use TinyRenderer for link-level segmentation
+            flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
         )
-        rgb_img, depth_img = self.process_rgbd(image, self.nearval, self.farval)
-        return rgb_img, depth_img
+        rgb_img, depth_img, seg_img = self.process_rgbd(image, self.nearval, self.farval)
+        return rgb_img, depth_img, seg_img
